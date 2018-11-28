@@ -3,6 +3,12 @@ import numpy as np
 from scipy.linalg import eigh
 
 
+def __min_eigenvec_rf(A):
+    v = np.ones(4)
+    for i in range(16):
+        v = A.dot(v)
+    return v[:3]/v[3]
+
 def range_flow_SJB(Z0, Z1, window=np.ones((3,3)), yx=None):
     """
     Range flow estimation
@@ -51,10 +57,14 @@ def range_flow_SJB(Z0, Z1, window=np.ones((3,3)), yx=None):
             d = grad[p0-hwin[0]:p0+hwin[0],p1-hwin[1]:p1+hwin[1]]
             d = (d.T * win.T).T
             J = np.tensordot(d, d, ([0,1], [0,1]))
-            f = eigh(J)[1][:,0]  # 4d eigenvector corresponding to the smallest eigenvalue
-            rf[p0,p1] = f[:3] / f[3]
+            # 4d eigenvector corresponding to the smallest eigenvalue
+            # f = eigh(J)[1][:,0]
+            #rf[p0,p1] = f[:3] / f[3]
+            rf[p0,p1] = __min_eigenvec_rf(J)
 
     return rf
+
+
 
 
 if __name__ == '__main__':
