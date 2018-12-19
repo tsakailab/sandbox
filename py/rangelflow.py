@@ -15,15 +15,18 @@ def vfshow(flow, every=1, scale=1.):
     ax = quiver(X, Y, flow[::every,::every,1], -flow[::every,::every,0], scale_units='xy',scale=scale)
     return ax
 
-def __min_eigenvec_rf(A,itr=16):
+def __min_eigenvec_rf(A,itr=16,confidence=1.0):
     v = np.ones(4)
+    trA = np.trace(A)
     for i in range(itr):
+        v *= 1 / v[3]
         v = -A.dot(v)
-        v *= 1./abs(v[3])
+    if abs(v[3]) < trA*confidence:
+        return np.zeros(3)
     return v[:3]/v[3]
 
 
-def range_flow_SJB(Z0, Z1, window=np.ones((3,3)), yx=None, scale=1.):
+def range_flow_SJB(Z0, Z1, window=np.ones((3,3)), yx=None, scale=1., confidence=1.0):
     """
     Range flow estimation
 
@@ -74,7 +77,7 @@ def range_flow_SJB(Z0, Z1, window=np.ones((3,3)), yx=None, scale=1.):
             d = (d.T * win.T).T
             J = np.tensordot(d, d, ([0,1], [0,1]))
             # 4d eigenvector corresponding to the smallest eigenvalue
-            rf[p0,p1] = __min_eigenvec_rf(J) * scale
+            rf[p0,p1] = __min_eigenvec_rf(J, itr=8, confidence=confidence) * scale
             #f = eigh(J)[1][:,0]
             #if f[3] == 0: f[3] = 1.
             #rf[p0,p1] = f[:3] / f[3] * scale
@@ -82,7 +85,7 @@ def range_flow_SJB(Z0, Z1, window=np.ones((3,3)), yx=None, scale=1.):
             #eivec, eival = np.linalg.svd(J)[:2]
             #eivec = eivec[:,::-1]
             #eival = eival[::-1]
-            #if eival[0]/eival[3] > 0.00001:
+            #if eival[3]/eival[0] > 0.1:
             #    rf[p0,p1] = eivec[:,0][:3] / eivec[:,0][3] * scale
     return rf, grad, J
 
@@ -95,16 +98,16 @@ if __name__ == '__main__':
     from scipy import ndimage
     import matplotlib.pyplot as plt
     f0 = 'crop_depth/resize_depth0620.tiff'
-    f1 = 'crop_depth/resize_depth0621.tiff'
+    f1 = 'crop_depth/resize_depth0630.tiff'
     im0 = np.asarray(Image.open(f0), dtype=np.float32)
     im1 = np.asarray(Image.open(f1), dtype=np.float32)
 
     im0 = ndimage.gaussian_filter(im0, sigma=3.0)
     im1 = ndimage.gaussian_filter(im1, sigma=3.0)
 
-    flow, g, J = range_flow_SJB(im0, im1, window=np.ones((5,5)))
+    flow, g, J = range_flow_SJB(im0, im1, window=np.ones((5,5)), confidence=0.999)
     plt.figure()
-    vfshow(flow[...,:2], scale=0.1, every=3)
+    vfshow(flow[...,:2], scale=0.01, every=3)
 
     mag, ang = _cartToPolar(flow[...,0], flow[...,1])
     hsv = np.zeros((im0.shape[0],im1.shape[1], 3), dtype=np.uint8)
