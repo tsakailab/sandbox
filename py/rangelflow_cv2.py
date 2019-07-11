@@ -6,7 +6,7 @@ from scipy.linalg import eigh
 def __min_eigenvec_rf(A):
     v = np.ones(4)
     for i in range(16):
-        v = A.dot(v)
+        v = -(A.dot(v))
     return v[:3]/v[3]
 
 def range_flow_SJB(Z0, Z1, window=np.ones((3,3)), yx=None):
@@ -16,13 +16,13 @@ def range_flow_SJB(Z0, Z1, window=np.ones((3,3)), yx=None):
     Parameters
     ----------
     Z0: ndarray, shape (`height`, `width`)
-        `height` x `width` depth image of the first frame
+        depth image of the first frame
     Z1: ndarray, shape (`height`, `width`)
-        `height` x `width` depth image of the second frame
+        depth image of the second frame
     window: ndarray, optional, default np.ones((3,3))
         weighting window.
     yx: ndarray, optional, default None
-        Currently not in use, will be used for specifing the positions to compute the range flow.
+        Currently not in use, will be used for specifing the positions to compute the range flows.
 
     Returns
     -------
@@ -44,7 +44,7 @@ def range_flow_SJB(Z0, Z1, window=np.ones((3,3)), yx=None):
 
     height, width = Z0.shape[:2]
     grad = np.zeros((height, width, 4))
-    grad[:,:,:2] = np.gradient(Z0)
+    grad[:,:,0], grad[:,:,1] = np.gradient(Z0)
     grad[:,:,2] = - np.ones((height, width))
     grad[:,:,3] = Z1 - Z0
 
@@ -104,7 +104,7 @@ if __name__ == '__main__':
         cv2.calcOpticalFlowFarneback(im1_gray,im2_gray, flow, 0.5, 3, 7, 3, 5, 1.1, 0)
 
         mag, ang = cv2.cartToPolar(flow[...,0], flow[...,1])
-        hsv[...,0] = ang*180/np.pi/2
+        hsv[...,0] = ang*180/np.pi
         #hsv[...,2] = cv2.normalize(mag,None,0,255,cv2.NORM_MINMAX)
         hsv[...,1] = mag*4
         rgb = cv2.cvtColor(hsv,cv2.COLOR_HSV2BGR)
